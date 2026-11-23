@@ -31,13 +31,13 @@ export function fromDayKey(key: string, hour = 0, minute = 0): Date {
   return new Date(y, m - 1, d, hour, minute, 0, 0);
 }
 
-// The next `count` bookable days starting today. Sundays are skipped (placeholder: office hours come later).
-export function nextBookableDays(count: number): Date[] {
+// The next `count` days (starting today) on which the office is open.
+export function nextBookableDays(count: number, isOpenDay: (dayOfWeek: number) => boolean): Date[] {
   const out: Date[] = [];
   const cursor = new Date();
   cursor.setHours(0, 0, 0, 0);
   while (out.length < count) {
-    if (cursor.getDay() !== 0) out.push(new Date(cursor));
+    if (isOpenDay(cursor.getDay())) out.push(new Date(cursor));
     cursor.setDate(cursor.getDate() + 1);
   }
   return out;

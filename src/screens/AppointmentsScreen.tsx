@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Text, View } from 'react-native';
 import type { Appointment, Service } from '../types';
 import { Button, Card, Muted, Screen, SectionTitle, styles } from '../components/ui';
+import { CHANGE_NOTICE_HOURS, canChangeOnline, describeHours, office } from '../config/office';
 import { useApp } from '../state/AppContext';
 import { colors } from '../theme';
 import { formatWhen } from '../utils/dates';
@@ -33,12 +34,18 @@ export default function AppointmentsScreen() {
         text: 'Cancel appointment',
         style: 'destructive',
         onPress: async () => {
-          await api.cancel(appt.id);
+          try {
+            await api.cancel(appt.id);
+          } catch (e) {
+            Alert.alert('Could not cancel', e instanceof Error ? e.message : 'Please call the office.');
+          }
           load();
         },
       },
     ]);
   }
+
+  const callOffice = () => Linking.openURL(office.phoneLink);
 
   return (
     <Screen title="My appointments">
@@ -54,23 +61,39 @@ export default function AppointmentsScreen() {
 
       {upcoming.map((appt) => {
         const service = services.find((s) => s.id === appt.serviceId);
+        const changeable = canChangeOnline(appt.startsAt);
         return (
           <Card key={appt.id}>
             <Text style={styles.sectionTitle}>{formatWhen(appt.startsAt)}</Text>
             <Muted>{service ? `${service.name} - ${service.minutes} min` : 'Visit'}</Muted>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              <View style={{ flex: 1 }}>
-                <Button label="Reschedule" variant="secondary" onPress={() => startReschedule(appt)} />
+            {changeable ? (
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={{ flex: 1 }}>
+                  <Button label="Reschedule" variant="secondary" onPress={() => startReschedule(appt)} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Button label="Cancel" variant="danger" onPress={() => confirmCancel(appt)} />
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Button label="Cancel" variant="danger" onPress={() => confirmCancel(appt)} />
-              </View>
-            </View>
+            ) : (
+              <>
+                <Muted>{`Changes within ${CHANGE_NOTICE_HOURS} hours of a visit need a call to the office.`}</Muted>
+                <Button label={`Call ${office.phoneDisplay}`} variant="secondary" onPress={callOffice} />
+              </>
+            )}
           </Card>
         );
       })}
 
       {upcoming.length > 0 && <Button label="Book another visit" onPress={() => goTab('book')} />}
+
+      <Card>
+        <SectionTitle>{office.name}</SectionTitle>
+        {describeHours().map((line) => (
+          <Muted key={line}>{line}</Muted>
+        ))}
+        <Button label={`Call ${office.phoneDisplay}`} variant="secondary" onPress={callOffice} />
+      </Card>
     </Screen>
   );
 }

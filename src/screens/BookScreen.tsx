@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Service } from '../types';
 import { Button, Card, Muted, Screen, SectionTitle } from '../components/ui';
+import { FEES_DUE_NOTE, isOpenDay, newPatient, office } from '../config/office';
 import { useApp } from '../state/AppContext';
 import { colors, radius, space } from '../theme';
 import { formatDay, formatTime, formatWhen, nextBookableDays, toDayKey } from '../utils/dates';
@@ -16,7 +17,7 @@ export default function BookScreen() {
   const [slot, setSlot] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const days = nextBookableDays(14);
+  const days = nextBookableDays(14, isOpenDay);
   const service = services.find((s) => s.id === serviceId) ?? null;
 
   useEffect(() => {
@@ -27,8 +28,8 @@ export default function BookScreen() {
     if (!serviceId || !dayKey) return;
     setSlots(null);
     setSlot(null);
-    api.listSlots(serviceId, dayKey).then(setSlots);
-  }, [api, serviceId, dayKey]);
+    api.listSlots(serviceId, dayKey, rescheduling?.id).then(setSlots);
+  }, [api, serviceId, dayKey, rescheduling]);
 
   async function confirm() {
     if (!serviceId || !slot) return;
@@ -59,6 +60,16 @@ export default function BookScreen() {
       )}
 
       {!rescheduling && (
+        <Card>
+          <SectionTitle>New patient?</SectionTitle>
+          <Muted>
+            {`Please call us to schedule your first visit. The new patient exam is ${newPatient.examFee} and includes ${newPatient.includes}.`}
+          </Muted>
+          <Button label={`Call ${office.phoneDisplay}`} variant="secondary" onPress={() => Linking.openURL(office.phoneLink)} />
+        </Card>
+      )}
+
+      {!rescheduling && (
         <>
           <SectionTitle>1. What kind of visit?</SectionTitle>
           {services.map((svc) => (
@@ -68,6 +79,7 @@ export default function BookScreen() {
                   {serviceId === svc.id ? '✓ ' : ''}{svc.name}
                 </Text>
                 <Muted>{`${svc.minutes} min - ${svc.description}`}</Muted>
+                {svc.feeNote && <Muted>{svc.feeNote}</Muted>}
               </Card>
             </Pressable>
           ))}
@@ -114,6 +126,7 @@ export default function BookScreen() {
           <SectionTitle>Confirm</SectionTitle>
           <Text style={s.optionTitle}>{formatWhen(slot)}</Text>
           <Muted>{`${service.name} - ${service.minutes} min`}</Muted>
+          <Muted>{FEES_DUE_NOTE}</Muted>
           <Button label={rescheduling ? 'Confirm new time' : 'Confirm booking'} onPress={confirm} disabled={busy} />
         </Card>
       )}

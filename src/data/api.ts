@@ -1,10 +1,12 @@
+import { CHANGE_NOTICE_HOURS, SLOT_STEP_MINUTES, canChangeOnline, hours, office, services } from '../config/office';
 import type { Appointment, Exercise, Patient, Service } from '../types';
 import { fromDayKey } from '../utils/dates';
 
 /**
  * Everything the app needs from a backend goes through this interface.
- * Today it is backed by in-memory mock data (see mockApi.ts). Later we write a second
- * implementation (Supabase or similar) and swap it in one place - screens do not change.
+ * Today it is backed by in-memory mock data. Later we write a second implementation
+ * (Supabase or similar) and swap it in one place - screens do not change.
+ * Office-specific facts (services, hours, fees, change window) come from src/config/office.ts.
  */
 export interface ClinicApi {
   requestCode(contact: string): Promise<void>;
@@ -13,7 +15,7 @@ export interface ClinicApi {
   listServices(): Promise<Service[]>;
   listAppointments(): Promise<Appointment[]>;
   /** Open start times (ISO) for a service on a local day (YYYY-MM-DD). */
-  listSlots(serviceId: string, dayKey: string): Promise<string[]>;
+  listSlots(serviceId: string, dayKey: string, ignoreAppointmentId?: string): Promise<string[]>;
   book(serviceId: string, startsAt: string): Promise<Appointment>;
   reschedule(appointmentId: string, startsAt: string): Promise<Appointment>;
   cancel(appointmentId: string): Promise<void>;
@@ -25,16 +27,10 @@ export interface ClinicApi {
 export const DEMO_CODE = '123456';
 
 // ---------------------------------------------------------------------------------------------
-// Mock implementation. Placeholder services/exercises - replace with the office's real ones.
+// Mock implementation. Exercises are placeholders - the real ones come from the doctor.
 // ---------------------------------------------------------------------------------------------
 
 const delay = (ms = 200) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-const services: Service[] = [
-  { id: 'adjust', name: 'Spinal adjustment', minutes: 20, description: 'Regular visit' },
-  { id: 'new', name: 'New patient visit', minutes: 45, description: 'Exam, history and first treatment' },
-  { id: 'reexam', name: 'Re-exam', minutes: 30, description: 'Progress check and updated plan' },
-];
 
 const exercises: Exercise[] = [
   { id: 'e1', title: 'Cat-camel stretch', instructions: 'On hands and knees, slowly arch then round your back.', dosage: '2 x 10 reps', doneToday: false },
@@ -45,9 +41,11 @@ const exercises: Exercise[] = [
 const appointments: Appointment[] = [];
 let nextId = 1;
 
+// One sample upcoming visit, on the first open day at least 3 days away, at 10:00.
 function seedAppointment() {
   const d = new Date();
-  d.setDate(d.getDate() + 2);
+  d.setDate(d.getDate() + 3);
+  while (hours[d.getDay()].length === 0) d.setDate(d.getDate() + 1);
   d.setHours(10, 0, 0, 0);
   appointments.push({ id: `a${nextId++}`, serviceId: 'adjust', startsAt: d.toISOString(), status: 'booked' });
 }
@@ -59,6 +57,12 @@ function takenByOthers(dayKey: string, hour: number, minute: number): boolean {
   const s = `${dayKey}-${hour}-${minute}`;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 9973;
   return h % 4 === 0;
+}
+
+function changeBlockedError(): Error {
+  return new Error(
+    `Visits can be changed in the app up to ${CHANGE_NOTICE_HOURS} hours ahead. Please call the office at ${office.phoneDisplay}.`,
+  );
 }
 
 export const mockApi: ClinicApi = {
@@ -83,20 +87,36 @@ export const mockApi: ClinicApi = {
     return appointments.map((a) => ({ ...a }));
   },
 
-  async listSlots(_serviceId, dayKey) {
+  async listSlots(serviceId, dayKey, ignoreAppointmentId) {
     await delay(150);
+    const service = services.find((s) => s.id === serviceId);
+    if (!service) return [];
+
+    const windows = hours[fromDayKey(dayKey).getDay()] ?? [];
+    const durationMs = service.minutes * 60000;
     const now = Date.now();
-    const booked = new Set(appointments.filter((a) => a.status === 'booked').map((a) => a.startsAt));
+
+    // Time ranges already taken by this patient's other booked visits.
+    const busy = appointments
+      .filter((a) => a.status === 'booked' && a.id !== ignoreAppointmentId)
+      .map((a) => {
+        const start = new Date(a.startsAt).getTime();
+        const mins = services.find((s) => s.id === a.serviceId)?.minutes ?? 30;
+        return { start, end: start + mins * 60000 };
+      });
+
     const out: string[] = [];
-    for (let hour = 9; hour < 17; hour++) {
-      if (hour === 12) continue; // lunch
-      for (const minute of [0, 30]) {
+    for (const [open, close] of windows) {
+      // A visit must finish before the window closes.
+      for (let m = open * 60; m + service.minutes <= close * 60; m += SLOT_STEP_MINUTES) {
+        const hour = Math.floor(m / 60);
+        const minute = m % 60;
         const start = fromDayKey(dayKey, hour, minute);
-        const iso = start.toISOString();
-        if (start.getTime() <= now) continue;
-        if (booked.has(iso)) continue;
+        const s = start.getTime();
+        if (s <= now) continue;
+        if (busy.some((b) => s < b.end && b.start < s + durationMs)) continue;
         if (takenByOthers(dayKey, hour, minute)) continue;
-        out.push(iso);
+        out.push(start.toISOString());
       }
     }
     return out;
@@ -113,6 +133,7 @@ export const mockApi: ClinicApi = {
     await delay();
     const appt = appointments.find((a) => a.id === appointmentId);
     if (!appt) throw new Error('Appointment not found.');
+    if (!canChangeOnline(appt.startsAt)) throw changeBlockedError();
     appt.startsAt = startsAt;
     return { ...appt };
   },
@@ -120,7 +141,9 @@ export const mockApi: ClinicApi = {
   async cancel(appointmentId) {
     await delay();
     const appt = appointments.find((a) => a.id === appointmentId);
-    if (appt) appt.status = 'cancelled';
+    if (!appt) return;
+    if (!canChangeOnline(appt.startsAt)) throw changeBlockedError();
+    appt.status = 'cancelled';
   },
 
   async listExercises() {

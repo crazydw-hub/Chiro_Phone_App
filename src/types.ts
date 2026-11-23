@@ -9,6 +9,7 @@ export type Service = {
   name: string;
   minutes: number;
   description: string;
+  feeNote?: string; // only when the office has published a fee for this service
 };
 
 export type Appointment = {

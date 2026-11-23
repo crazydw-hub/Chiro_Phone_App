@@ -28,6 +28,7 @@ The app only uses packages that come with the blank-typescript template, so ther
 | Path | What it is |
 |---|---|
 | `App.tsx` | Entry point. Sign-in gate, bottom tabs, and the one line that picks the backend. |
+| `src/config/office.ts` | **All office-specific facts** (services, hours, fees, change window), each tagged confirmed / verify / placeholder. See `docs/OFFICE-DETAILS.md`. |
 | `src/data/api.ts` | `ClinicApi` interface + the mock backend. **Swap point for the real backend.** |
 | `src/screens/` | One file per screen. |
 | `src/components/ui.tsx` | Shared building blocks (Screen, Card, Button). |
