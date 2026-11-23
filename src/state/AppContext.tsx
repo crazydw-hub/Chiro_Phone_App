@@ -1,6 +1,6 @@
 import React, { createContext, useContext } from 'react';
 import type { ClinicApi } from '../data/api';
-import type { Appointment, Patient, Tab } from '../types';
+import type { Appointment, Overlay, Patient, Tab } from '../types';
 
 type AppState = {
   api: ClinicApi;
@@ -12,6 +12,10 @@ type AppState = {
   rescheduling: Appointment | null;
   startReschedule: (appt: Appointment) => void;
   clearReschedule: () => void;
+  /** A full-screen page (forms, payment, front-desk preview) shown over the tabs. */
+  overlay: Overlay | null;
+  openOverlay: (o: Overlay) => void;
+  closeOverlay: () => void;
 };
 
 const AppContext = createContext<AppState | null>(null);

@@ -1,6 +1,6 @@
 # Office details: what is confirmed and what is not
 
-All office facts live in one file: `src/config/office.ts`. Each value there is tagged **[OFFICE]**, **[DEMO]** or **[CONFIRM]**.
+All Underwood facts live in one file: `src/practice/underwood.ts`. Each value there is tagged **[OFFICE]**, **[DEMO]** or **[CONFIRM]**.
 
 | Item | Value in the app | Status | Source |
 |---|---|---|---|

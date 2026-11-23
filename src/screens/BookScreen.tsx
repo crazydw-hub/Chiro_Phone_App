@@ -18,6 +18,11 @@ export default function BookScreen() {
   const [busy, setBusy] = useState(false);
 
   const days = nextBookableDays(14, isOpenDay);
+  const newPatientText = newPatient.examFee
+    ? `Please call us to schedule your first visit. The new patient exam is ${newPatient.examFee}${
+        newPatient.includes ? ` and includes ${newPatient.includes}` : ''
+      }.`
+    : 'Please call us to schedule your first visit.';
   const service = services.find((s) => s.id === serviceId) ?? null;
 
   useEffect(() => {
@@ -59,12 +64,10 @@ export default function BookScreen() {
         </Card>
       )}
 
-      {!rescheduling && (
+      {!rescheduling && newPatient.mode === 'call' && (
         <Card>
           <SectionTitle>New patient?</SectionTitle>
-          <Muted>
-            {`Please call us to schedule your first visit. The new patient exam is ${newPatient.examFee} and includes ${newPatient.includes}.`}
-          </Muted>
+          <Muted>{newPatientText}</Muted>
           <Button label={`Call ${office.phoneDisplay}`} variant="secondary" onPress={() => Linking.openURL(office.phoneLink)} />
         </Card>
       )}
@@ -126,7 +129,7 @@ export default function BookScreen() {
           <SectionTitle>Confirm</SectionTitle>
           <Text style={s.optionTitle}>{formatWhen(slot)}</Text>
           <Muted>{`${service.name} - ${service.minutes} min`}</Muted>
-          <Muted>{FEES_DUE_NOTE}</Muted>
+          {FEES_DUE_NOTE ? <Muted>{FEES_DUE_NOTE}</Muted> : null}
           <Button label={rescheduling ? 'Confirm new time' : 'Confirm booking'} onPress={confirm} disabled={busy} />
         </Card>
       )}

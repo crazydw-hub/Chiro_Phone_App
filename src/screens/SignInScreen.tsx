@@ -4,6 +4,7 @@ import type { ClinicApi } from '../data/api';
 import { DEMO_CODE } from '../data/api';
 import type { Patient } from '../types';
 import { Button, Muted } from '../components/ui';
+import { practice } from '../practice/active';
 import { colors, radius, space } from '../theme';
 
 // Passwordless sign-in: the patient enters email/phone, gets a one-time code. No passwords to forget.
@@ -40,7 +41,7 @@ export default function SignInScreen({ api, onSignedIn }: { api: ClinicApi; onSi
 
   return (
     <View style={s.wrap}>
-      <Text style={s.title}>Welcome</Text>
+      <Text style={s.title}>{practice.name}</Text>
       <Muted>Sign in with your email or phone number. We will send you a code - no password needed.</Muted>
 
       <TextInput

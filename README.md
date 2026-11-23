@@ -28,7 +28,8 @@ The app only uses packages that come with the blank-typescript template, so ther
 | Path | What it is |
 |---|---|
 | `App.tsx` | Entry point. Sign-in gate, bottom tabs, and the one line that picks the backend. |
-| `src/config/office.ts` | **All office-specific facts** (services, hours, fees, change window), each tagged confirmed / verify / placeholder. See `docs/OFFICE-DETAILS.md`. |
+| `src/practice/` | **One config file per chiropractic practice** (brand, hours, services, fees, rules, feature switches). `active.ts` picks which one the app uses. See `docs/TEMPLATE-GUIDE.md`. |
+| `src/config/office.ts` | Small helpers (hours text, change-window check) that read the active practice. |
 | `src/data/api.ts` | `ClinicApi` interface + the mock backend. **Swap point for the real backend.** |
 | `src/screens/` | One file per screen. |
 | `src/components/ui.tsx` | Shared building blocks (Screen, Card, Button). |
@@ -37,12 +38,15 @@ The app only uses packages that come with the blank-typescript template, so ther
 
 ## Placeholders to replace
 
-- Services, exercises, and open time slots in `src/data/api.ts` are made up. Real hours, services and the doctor's
-  exercises come from the office.
-- Colors in `src/theme.ts`; app name/icon in `app.json` after setup.
-- Sundays are skipped and 12:00-1:00 is blocked for lunch in the mock - real office hours go in the backend.
+- The exercises in `src/practice/underwood.ts` are made up; the doctor supplies real ones. Which office facts are
+  confirmed vs placeholders: `docs/OFFICE-DETAILS.md`.
+- Navy brand color matches the website prototype; confirm it against the logo. App name/icon in `app.json`.
 
 ## Not built yet (each is its own module)
 
 Real backend and accounts, push reminders, intake forms, check-in, messaging, payments, family accounts,
 staff schedule screen, Play Store packaging.
+
+
+## Demo modules
+Check-in, intake forms, messaging and payments are switchable per practice. See `docs/DEMO-MODULES.md`.

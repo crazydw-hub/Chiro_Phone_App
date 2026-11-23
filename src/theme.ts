@@ -1,5 +1,8 @@
-// Brand colors are placeholders based on the office's purple + white. Change them here only.
-export const colors = {
+import { practice } from './practice/active';
+import type { Brand } from './practice/types';
+
+// Neutral defaults. Each practice overrides only the colors that differ (see its `brand` field).
+const defaults: Brand = {
   primary: '#5B2A86',
   primaryDark: '#431C66',
   onPrimary: '#FFFFFF',
@@ -11,6 +14,8 @@ export const colors = {
   danger: '#B3261E',
   success: '#2E7D32',
 };
+
+export const colors: Brand = { ...defaults, ...practice.brand };
 
 export const space = { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 };
 
